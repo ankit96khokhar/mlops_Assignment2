@@ -25,10 +25,18 @@ jobs:
         export PYTHONPATH=$PYTHONPATH:$(pwd)
         pytest
 
-    - name: Build Docker image
-      run: docker build -t ${{ secrets.DOCKER_USER }}/cats-dogs .
+    # 🔥 NEW STEP — Enable Buildx
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-    - name: Push Docker image
+    # 🔐 Login first
+    - name: Login to Docker Hub
+      run: echo "${{ secrets.DOCKER_PASS }}" | docker login -u "${{ secrets.DOCKER_USER }}" --password-stdin
+
+    # 🔥 MULTI-ARCH BUILD + PUSH
+    - name: Build and Push Multi-Arch Image
       run: |
-        echo "${{ secrets.DOCKER_PASS }}" | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
-        docker push ${{ secrets.DOCKER_USER }}/cats-dogs
+        docker buildx build \
+          --platform linux/amd64,linux/arm64 \
+          -t ${{ secrets.DOCKER_USER }}/cats-dogs:latest \
+          --push .

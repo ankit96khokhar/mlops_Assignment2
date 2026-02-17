@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cats-dogs-deployment
+  labels:
+    app: cats-dogs
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cats-dogs
+  template:
+    metadata:
+      labels:
+        app: cats-dogs
+    spec:
+      containers:
+        - name: cats-dogs-container
+          image: ankit1996khokhar/cats-dogs:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+
+          # Health checks
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 20
+
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
