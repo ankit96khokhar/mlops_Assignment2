@@ -1,0 +1,80 @@
+# src/inference.py
+
+from fastapi import FastAPI, UploadFile, File
+from fastapi.responses import JSONResponse
+import torch
+from PIL import Image
+from torchvision import transforms
+import io
+import time
+from prometheus_client import Counter, Histogram, generate_latest
+from src.model import SimpleCNN
+
+# ----------------------------
+# Device
+# ----------------------------
+device = torch.device("cpu")  # inference CPU-safe
+
+# ----------------------------
+# Load model at startup
+# ----------------------------
+model = SimpleCNN()
+model.load_state_dict(torch.load("models/model.pt", map_location=device))
+model.eval()
+
+# ----------------------------
+# Transform (NO augmentation)
+# ----------------------------
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize([0.5]*3, [0.5]*3)
+])
+
+# ----------------------------
+# Monitoring Metrics
+# ----------------------------
+REQUEST_COUNT = Counter("request_count", "Total prediction requests")
+LATENCY = Histogram("prediction_latency_seconds", "Prediction latency")
+
+# ----------------------------
+# FastAPI app
+# ----------------------------
+app = FastAPI(title="Cats vs Dogs Classifier")
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+@app.post("/predict")
+async def predict(file: UploadFile = File(...)):
+    try:
+        REQUEST_COUNT.inc()
+
+        start_time = time.time()
+
+        image_bytes = await file.read()
+        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        image = transform(image).unsqueeze(0)
+
+        with torch.no_grad():
+            output = model(image)
+            prob = output.item()
+
+        label = "dog" if prob > 0.5 else "cat"
+
+        latency = time.time() - start_time
+        LATENCY.observe(latency)
+
+        return {
+            "label": label,
+            "probability": round(prob, 4),
+            "latency_seconds": round(latency, 4)
+        }
+
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
+@app.get("/metrics")
+def metrics():
+    return generate_latest()
