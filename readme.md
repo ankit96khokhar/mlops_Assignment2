@@ -19,3 +19,13 @@ docker run -p 9999:9999 cats-dogs:latest
 
 Tests:
 python3 -m pytest
+
+Argocd:
+argocd login argocd.example.com:8080 --username admin --password xU1RnihRX3ptlVjQ --insecure --grpc-web
+
+argocd app create cats-dogs \  --repo https://github.com/ankit96khokhar/mlops_Assignment2.git \
+  --path k8s \
+  --dest-server https://kubernetes.default.svc \
+  --dest-namespace default
+application 'cats-dogs' created
+

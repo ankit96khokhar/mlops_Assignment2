@@ -9,6 +9,10 @@ import io
 import time
 from prometheus_client import Counter, Histogram, generate_latest
 from src.model import SimpleCNN
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # ----------------------------
 # Device

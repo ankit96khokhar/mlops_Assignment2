@@ -8,5 +8,5 @@ spec:
     app: cats-dogs
   ports:
     - port: 80
-      targetPort: 8000
+      targetPort: 9999
       nodePort: 30007

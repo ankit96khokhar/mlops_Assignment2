@@ -19,20 +19,20 @@ spec:
           image: ankit1996khokhar/cats-dogs:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 8000
+            - containerPort: 9999
 
           # Health checks
           readinessProbe:
             httpGet:
               path: /health
-              port: 8000
+              port: 9999
             initialDelaySeconds: 5
             periodSeconds: 10
 
           livenessProbe:
             httpGet:
               path: /health
-              port: 8000
+              port: 9999
             initialDelaySeconds: 10
             periodSeconds: 20
 
