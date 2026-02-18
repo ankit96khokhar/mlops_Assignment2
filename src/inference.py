@@ -11,20 +11,33 @@ from prometheus_client import Counter, Histogram, generate_latest
 from src.model import SimpleCNN
 import logging
 
-logging.basicConfig(level=logging.INFO)
+# ----------------------------
+# Logging Configuration
+# ----------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s",
+)
+
 logger = logging.getLogger(__name__)
 
 # ----------------------------
 # Device
 # ----------------------------
-device = torch.device("cpu")  # inference CPU-safe
+device = torch.device("cpu")
+logger.info(f"Using device: {device}")
 
 # ----------------------------
 # Load model at startup
 # ----------------------------
-model = SimpleCNN()
-model.load_state_dict(torch.load("models/model.pt", map_location=device))
-model.eval()
+try:
+    model = SimpleCNN()
+    model.load_state_dict(torch.load("models/model.pt", map_location=device))
+    model.eval()
+    logger.info("Model loaded successfully.")
+except Exception as e:
+    logger.exception("Model failed to load.")
+    raise e
 
 # ----------------------------
 # Transform (NO augmentation)
@@ -38,7 +51,7 @@ transform = transforms.Compose([
 # ----------------------------
 # Monitoring Metrics
 # ----------------------------
-REQUEST_COUNT = Counter("request_count", "Total prediction requests")
+REQUEST_COUNT = Counter("request_count_total", "Total prediction requests")
 LATENCY = Histogram("prediction_latency_seconds", "Prediction latency")
 
 # ----------------------------
@@ -48,12 +61,14 @@ app = FastAPI(title="Cats vs Dogs Classifier")
 
 @app.get("/health")
 def health():
+    logger.info("Health check called.")
     return {"status": "ok"}
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     try:
         REQUEST_COUNT.inc()
+        logger.info("Prediction request received.")
 
         start_time = time.time()
 
@@ -70,6 +85,11 @@ async def predict(file: UploadFile = File(...)):
         latency = time.time() - start_time
         LATENCY.observe(latency)
 
+        logger.info(
+            f"Prediction completed | label={label} | "
+            f"probability={prob:.4f} | latency={latency:.4f}s"
+        )
+
         return {
             "label": label,
             "probability": round(prob, 4),
@@ -77,8 +97,10 @@ async def predict(file: UploadFile = File(...)):
         }
 
     except Exception as e:
+        logger.exception("Prediction failed.")
         return JSONResponse(status_code=400, content={"error": str(e)})
 
 @app.get("/metrics")
 def metrics():
+    logger.info("Metrics endpoint called.")
     return generate_latest()
