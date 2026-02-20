@@ -5,6 +5,12 @@ pip install -r requirements.txt
 mlflow:
 http://localhost:5050
 
+DVC:
+mkdir dvc_storage
+dvc init
+dvc remote add -d localstorage ./dvc_storage
+dvc add data/raw
+dvc push
 
 
 Inference:
@@ -21,7 +27,7 @@ Tests:
 python3 -m pytest
 
 Argocd:
-argocd login argocd.example.com:8080 --username admin --password xU1RnihRX3ptlVjQ --insecure --grpc-web
+argocd login argocd.example.com:8080 --username admin --password ********** --insecure --grpc-web
 
 argocd app create cats-dogs \  --repo https://github.com/ankit96khokhar/mlops_Assignment2.git \
   --path k8s \
